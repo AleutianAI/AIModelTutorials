@@ -1,0 +1,16 @@
+wheel
+torch
+transformers
+accelerate
+diffusers
+Pillow
+opencv-python
+easydict
+ftfy
+einops
+torchvision
+tqdm
+dashscope
+imageio
+triton
+opencv-python
