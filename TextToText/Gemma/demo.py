@@ -7,6 +7,7 @@ Two extra things you need to do here
  - install the Gemma 3 specific transformers library (included in the Dockerfile)
 
 """
+import argparse
 
 import torch
 
@@ -25,7 +26,10 @@ class Gemma3BTextToTextDemo:
         # use -pt if you want a base model to fine-tune or doing RAG like iterations on.
         model_name = "google/gemma-3-4b-it"
         model_base = Gemma3ForConditionalGeneration.from_pretrained(
-            model_name, device_map="cuda", torch_dtype=torch.bfloat16)
+            model_name,
+            device_map="cuda",
+            torch_dtype=torch.bfloat16,
+            attn_implementation="eager",)
         self.model = model_base.eval()
         self.processor = AutoProcessor.from_pretrained(model_name)
         self.messages = [
@@ -74,6 +78,9 @@ class Gemma3BTextToTextDemo:
         )
 
 if __name__ == "__main__":
-    demo = Gemma3BTextToTextDemo(
-        prompt="Please, compare visiting California to visiting Florida for a vacation.")
+    parser = argparse.ArgumentParser(description="Gemma Demo")
+    parser.add_argument("--prompt", type=str, help="Prompt to use in the LLM")
+    args = parser.parse_args()
+    print(args.prompt)
+    demo = Gemma3BTextToTextDemo(prompt=args.prompt)
     demo.run()

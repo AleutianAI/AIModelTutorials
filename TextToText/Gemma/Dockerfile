@@ -15,4 +15,4 @@ RUN python3 -m pip install -r requirements.txt
 RUN python3 -m pip install git+https://github.com/huggingface/transformers@v4.49.0-Gemma-3
 
 
-CMD python3 demo.py
+CMD ["python3", "demo.py", "--prompt", "Где самые лучшие места для отдыха в России"]
