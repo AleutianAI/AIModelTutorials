@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Doto:wght@100..900&display=swap" rel="stylesheet">
+
+    <title>Gemma Chat</title>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <style>
+        body {
+            font-family: 'Futura', sans-serif;
+            background-color: #004225;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        #chat-container {
+            width: 80%;
+            max-width: 1000px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        #chat-output {
+            background-color: #000;
+            color: #00ff00;
+            font-family: 'Doto', monospace;
+            font-size: 14px;
+            padding: 15px;
+            border-radius: 4px;
+            height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        #chat-input-form {
+            margin-top: 20px;
+            display: flex;
+        }
+
+        #chat-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        #chat-submit {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-output"></div>
+        <form id="chat-input-form" hx-post="/chat" hx-target="#chat-output" hx-swap="beforeend"
+              hx-on::before-request="disableSend()" hx-on::after-request="enableSend(event); this.reset()">
+            <input type="text" id="chat-input" name="chat_content" placeholder="Type your message...">
+            <button id="chat-submit" type="submit">Send</button>
+        </form>
+    </div>
+
+
+    <script>
+        let isSending = false;
+
+        function disableSend() {
+            if (!isSending) {
+                document.getElementById('chat-submit').disabled = true;
+                isSending = true;
+            }
+        }
+
+        function enableSend(event) {
+            document.getElementById('chat-submit').disabled = false;
+            isSending = false;
+            if (event.detail.successful) {
+                const responseText = event.detail.xhr.responseText;
+                const outputDiv = document.getElementById('chat-output');
+                outputDiv.innerHTML += `AI: `;
+
+                let charIndex = 0;
+                const typeWriter = setInterval(() => {
+                    if (charIndex < responseText.length) {
+                        outputDiv.innerHTML += responseText.charAt(charIndex);
+                        charIndex++;
+                        outputDiv.scrollTop = outputDiv.scrollHeight;
+                    } else {
+                        clearInterval(typeWriter);
+                    }
+                }, 50);
+            }
+        }-
+        document.addEventListener('submit', function(evt) {
+            if (evt.target.id === 'chat-input-form') {
+                if (isSending) {
+                    evt.preventDefault();
+                    return;
+                }
+                const input = document.getElementById('chat-input').value;
+                const outputDiv = document.getElementById('chat-output');
+                outputDiv.innerHTML += `User: ${input}\n`;
+                outputDiv.scrollTop = outputDiv.scrollHeight;
+
+                document.getElementById('chat-submit').disabled = true; // Disable the button immediately
+                isSending = true;
+            }
+        });
+
+        document.addEventListener('htmx:afterSwap', function(evt) {
+            if (evt.target.id === 'chat-output') {
+                document.getElementById('chat-submit').disabled = false;
+                isSending = false;
+                const responseText = evt.detail.xhr.responseText;
+                const outputDiv = document.getElementById('chat-output');
+                outputDiv.innerHTML += `AI: `;
+
+                let charIndex = 0;
+                const typeWriter = setInterval(() => {
+                    if (charIndex < responseText.length) {
+                        outputDiv.innerHTML += responseText.charAt(charIndex);
+                        charIndex++;
+                        outputDiv.scrollTop = outputDiv.scrollHeight;
+                    } else {
+                        clearInterval(typeWriter);
+                    }
+                }, 50);
+            }
+        });
+    </script>
+</body>
+</html>
