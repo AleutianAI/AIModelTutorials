@@ -1,0 +1,9 @@
+torch
+transformers
+accelerate
+huggingface_hub
+pillow
+argparse
+fastapi
+pydantic
+uvicorn

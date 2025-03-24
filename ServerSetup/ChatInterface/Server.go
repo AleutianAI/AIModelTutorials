@@ -3,10 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type ChatRequest struct {
@@ -14,8 +16,13 @@ type ChatRequest struct {
 	ChatContent string `json:"chat_content"`
 }
 
+type ChatResponse struct {
+	LLMResponse     string `json:"llm_response"`
+	LLMResponseTime int64  `json:"llm_response_time"`
+}
+
 var (
-	LOCAL_GEMMA_URL  = "http://localhost:12322"
+	LOCAL_GEMMA_URL  = "http://gemma_python_llm_server:12322/chat"
 	userRequestState = make(map[string]bool)
 )
 
@@ -41,6 +48,7 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 func GemmaChatBotRequestHandler(w http.ResponseWriter, r *http.Request) {
 	var chatRequest ChatRequest
 	var chatPost []byte
+	var llmResponse ChatResponse
 	userIP := r.RemoteAddr
 	if userRequestState[userIP] {
 		log.Println("Request already in progress", userIP)
@@ -53,6 +61,7 @@ func GemmaChatBotRequestHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 	}
+	log.Println(string(res))
 	err = json.Unmarshal(res, &chatRequest)
 	if err != nil {
 		log.Println("Failed to parse the json request", err)
@@ -78,16 +87,37 @@ func GemmaChatBotRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	// Now you take the Gemma response, package it up and send it back to the frontend.
+	// Now you take t*he Gemma response, package it up and send it back to the frontend.
 	gemmaResponse, err := io.ReadAll(resp.Body)
+	//gemmaResponse, err := json.Marshal(&ChatResponse{
+	//	LLMResponse:     "We're watching you.",
+	//	LLMResponseTime: time.Now().UnixMilli(),
+	//})
 	if err != nil {
 		log.Println("failed to read the gemma response", err)
 		http.Error(w, "failed to read the Gemma response", http.StatusInternalServerError)
 		return
 	}
+	fmt.Println(string(gemmaResponse))
+
+	err = json.Unmarshal(gemmaResponse, &llmResponse)
+	if err != nil {
+		log.Println("failed to unmarshal the response")
+		http.Error(w, "failed to unmarshal the LLM response", http.StatusInternalServerError)
+		return
+	}
+	if llmResponse.LLMResponseTime < time.Now().UnixMilli() {
+		llmResponse.LLMResponseTime = time.Now().UnixMilli()
+	}
+	output, err := json.Marshal(llmResponse)
+	if err != nil {
+		log.Println("failed to marshal the LLM response")
+		http.Error(w, "Failed to marshal the LLM response to send to the UI", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(gemmaResponse)
+	_, err = w.Write(output)
 	if err != nil {
 		log.Println("error writing back to the client", err)
 		http.Error(w, "error writing the Gemma response back to the client", http.StatusInternalServerError)

@@ -9,6 +9,8 @@
 
     <title>Gemma Chat</title>
     <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+
     <style>
         body {
             font-family: 'Futura', sans-serif;
@@ -23,7 +25,7 @@
 
         #chat-container {
             width: 80%;
-            max-width: 1000px;
+            max-width: 1200px;
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -37,7 +39,7 @@
             font-size: 14px;
             padding: 15px;
             border-radius: 4px;
-            height: 600px;
+            height: 1000px;
             overflow-y: auto;
             white-space: pre-wrap;
         }
@@ -71,8 +73,17 @@
 <body>
     <div id="chat-container">
         <div id="chat-output"></div>
-        <form id="chat-input-form" hx-post="/chat" hx-target="#chat-output" hx-swap="beforeend"
-              hx-on::before-request="disableSend()" hx-on::after-request="enableSend(event); this.reset()">
+        <form
+                id="chat-input-form"
+                hx-post="/chat"
+                hx-target="#chat-output"
+                hx-swap="beforeend"
+                hx-on::before-request="disableSend()"
+                hx-on::after-request="enableSend(event); this.reset()"
+                hx-vals="js:{request_time: Math.floor(Date.now()/1000), chat_content: document.getElementById('chat-input').value }"
+                hx-headers='{"Content-Type": "application/json"}'
+                hx-ext="json-enc"
+        >
             <input type="text" id="chat-input" name="chat_content" placeholder="Type your message...">
             <button id="chat-submit" type="submit">Send</button>
         </form>
@@ -93,20 +104,30 @@
             document.getElementById('chat-submit').disabled = false;
             isSending = false;
             if (event.detail.successful) {
-                const responseText = event.detail.xhr.responseText;
-                const outputDiv = document.getElementById('chat-output');
-                outputDiv.innerHTML += `AI: `;
+                try {
+                    const response = JSON.parse(event.detail.xhr.responseText);
+                    console.log(response);
+                    const LLMResponse = response.llm_response;
+                    const responseTime = new Date(response.llm_response_time).toISOString();
 
-                let charIndex = 0;
-                const typeWriter = setInterval(() => {
-                    if (charIndex < responseText.length) {
-                        outputDiv.innerHTML += responseText.charAt(charIndex);
-                        charIndex++;
-                        outputDiv.scrollTop = outputDiv.scrollHeight;
-                    } else {
-                        clearInterval(typeWriter);
-                    }
-                }, 50);
+
+                    const outputDiv = document.getElementById('chat-output');
+                    outputDiv.innerHTML = responseTime + ` AI: `;
+
+                    let charIndex = 0;
+                    const typeWriter = setInterval(() => {
+                        if (charIndex < LLMResponse.length) {
+                            outputDiv.innerHTML += LLMResponse.charAt(charIndex);
+                            charIndex++;
+                            outputDiv.scrollTop = outputDiv.scrollHeight;
+                        } else {
+                            clearInterval(typeWriter);
+                        }
+                    }, 5);
+                } catch (error) {
+                    console.error("Error parsing the JSON response", error);
+                    document.getElementById('chat-output').innerHTML = "Error in the LLM";
+                }
             }
         }-
         document.addEventListener('submit', function(evt) {
@@ -125,26 +146,6 @@
             }
         });
 
-        document.addEventListener('htmx:afterSwap', function(evt) {
-            if (evt.target.id === 'chat-output') {
-                document.getElementById('chat-submit').disabled = false;
-                isSending = false;
-                const responseText = evt.detail.xhr.responseText;
-                const outputDiv = document.getElementById('chat-output');
-                outputDiv.innerHTML += `AI: `;
-
-                let charIndex = 0;
-                const typeWriter = setInterval(() => {
-                    if (charIndex < responseText.length) {
-                        outputDiv.innerHTML += responseText.charAt(charIndex);
-                        charIndex++;
-                        outputDiv.scrollTop = outputDiv.scrollHeight;
-                    } else {
-                        clearInterval(typeWriter);
-                    }
-                }, 50);
-            }
-        });
     </script>
 </body>
 </html>
