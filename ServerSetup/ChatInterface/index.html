@@ -13,8 +13,8 @@
 
     <style>
         body {
-            font-family: 'Futura', sans-serif;
-            background-color: #004225;
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f0f2f5;
             margin: 0;
             display: flex;
             flex-direction: column;
@@ -25,39 +25,50 @@
 
         #chat-container {
             width: 80%;
-            max-width: 1200px;
+            max-width: 1000px;
             background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            padding: 24px;
         }
 
         #chat-output {
             background-color: #000;
             color: #00ff00;
             font-family: 'Doto', monospace;
-            font-size: 14px;
+            font-size: 16px;
+            font-weight: 300;
             padding: 15px;
-            border-radius: 4px;
+            border-radius: 8px;
             height: 1000px;
             overflow-y: auto;
             white-space: pre-wrap;
         }
 
         #chat-input-form {
-            margin-top: 20px;
+            margin-top: 24px;
             display: flex;
         }
 
         #chat-input {
             flex-grow: 1;
-            padding: 10px;
+            padding: 12px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-family: 'Courier New', monospace;
         }
 
         #chat-submit {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        #chat-clear {
             padding: 10px 20px;
             background-color: #007bff;
             color: white;
@@ -85,8 +96,10 @@
                 hx-ext="json-enc"
         >
             <input type="text" id="chat-input" name="chat_content" placeholder="Type your message...">
-            <button id="chat-submit" type="submit">Send</button>
-        </form>
+        <button id="chat-submit" type="submit">Send</button>
+        <button id="chat-clear" type="button" hx-post="/clear" hx-target="#chat-output"
+                hx-swap="innerHTML" onclick="clearChat()">Clear</button>
+    </form>
     </div>
 
 
@@ -100,16 +113,20 @@
             }
         }
 
+        function clearChat() {
+            const outputDiv = document.getElementById('chat-output');
+            outputDiv.innerHTML = "";
+        }
+
+
         function enableSend(event) {
             document.getElementById('chat-submit').disabled = false;
             isSending = false;
             if (event.detail.successful) {
                 try {
                     const response = JSON.parse(event.detail.xhr.responseText);
-                    console.log(response);
                     const LLMResponse = response.llm_response;
                     const responseTime = new Date(response.llm_response_time).toISOString();
-
 
                     const outputDiv = document.getElementById('chat-output');
                     outputDiv.innerHTML = responseTime + ` AI: `;
@@ -123,7 +140,7 @@
                         } else {
                             clearInterval(typeWriter);
                         }
-                    }, 5);
+                    }, 3);
                 } catch (error) {
                     console.error("Error parsing the JSON response", error);
                     document.getElementById('chat-output').innerHTML = "Error in the LLM";

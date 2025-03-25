@@ -33,6 +33,7 @@ from datetime import datetime
 
 
 
+
 class Message(BaseModel):
     request_time: int
     chat_content: str
@@ -40,6 +41,9 @@ class Message(BaseModel):
 class Response(BaseModel):
     llm_response: str
     llm_response_time: int
+
+class ClearResponse(BaseModel):
+    action: str
 
 class Gemma3BTextToTextDemoWithServer:
     def __init__(self):
@@ -91,6 +95,19 @@ class Gemma3BTextToTextDemoWithServer:
         })
         return decoded
 
+    def clear(self):
+        self.conversation_history = [
+            {
+                "role": "system",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "You are a helpful assistant."
+                    }
+                ]
+            },
+        ]
+
     def build_inputs(self) -> dict:
         return self.processor.apply_chat_template(
             self.conversation_history,
@@ -114,5 +131,18 @@ if __name__ == "__main__":
             return {"llm_response": response, "llm_response_time": llm_response_time}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/clear", response_model=ClearResponse)
+    async def clear(message: ClearResponse):
+        try:
+            if message.action == "clear":
+                demo.clear()
+                return {"status": "cleared"}
+            else:
+                return {"status": "error, action not recognized"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
     uvicorn.run(app, host="0.0.0.0", port=12322)
+
 
